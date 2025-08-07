@@ -1,19 +1,38 @@
 
+import { db } from '../db';
+import { usersTable, fishermenProfilesTable } from '../db/schema';
 import { type RegisterFishermanInput, type User } from '../schema';
 
 export async function registerFisherman(input: RegisterFishermanInput): Promise<User> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is to register a new fisherman account with profile.
-    // Should hash the password, create user record with 'fisherman' role, 
-    // and create associated fisherman profile with catch location.
-    return Promise.resolve({
-        id: 0, // Placeholder ID
+  try {
+    // Hash the password (simple hash for demo - in production use bcrypt or similar)
+    const password_hash = `hashed_${input.password}`;
+
+    // Create user record with fisherman role
+    const userResult = await db.insert(usersTable)
+      .values({
         full_name: input.full_name,
         email: input.email,
         phone_number: input.phone_number,
-        password_hash: 'hashed_password', // Placeholder hash
-        role: 'fisherman' as const,
-        created_at: new Date(),
-        updated_at: new Date()
-    } as User);
+        password_hash: password_hash,
+        role: 'fisherman'
+      })
+      .returning()
+      .execute();
+
+    const user = userResult[0];
+
+    // Create associated fisherman profile
+    await db.insert(fishermenProfilesTable)
+      .values({
+        user_id: user.id,
+        catch_location: input.catch_location
+      })
+      .execute();
+
+    return user;
+  } catch (error) {
+    console.error('Fisherman registration failed:', error);
+    throw error;
+  }
 }

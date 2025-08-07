@@ -1,21 +1,34 @@
 
+import { db } from '../db';
+import { fishProductsTable } from '../db/schema';
 import { type FishProduct } from '../schema';
+import { eq } from 'drizzle-orm';
 
 export async function deleteFishProduct(productId: number): Promise<FishProduct> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is to delete a fish product.
-    // Should verify that the product belongs to the requesting fisherman.
-    // Consider soft delete by setting is_active to false instead of hard delete.
-    return Promise.resolve({
-        id: productId,
-        fisherman_id: 0, // Placeholder
-        name: 'deleted_product',
-        description: null,
-        price_per_kg: 0,
-        stock_kg: 0,
-        image_url: null,
+  try {
+    // Soft delete by setting is_active to false
+    const result = await db.update(fishProductsTable)
+      .set({ 
         is_active: false,
-        created_at: new Date(),
         updated_at: new Date()
-    } as FishProduct);
+      })
+      .where(eq(fishProductsTable.id, productId))
+      .returning()
+      .execute();
+
+    if (result.length === 0) {
+      throw new Error('Fish product not found');
+    }
+
+    // Convert numeric fields back to numbers before returning
+    const product = result[0];
+    return {
+      ...product,
+      price_per_kg: parseFloat(product.price_per_kg),
+      stock_kg: parseFloat(product.stock_kg)
+    };
+  } catch (error) {
+    console.error('Fish product deletion failed:', error);
+    throw error;
+  }
 }

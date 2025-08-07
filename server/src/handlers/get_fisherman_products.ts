@@ -1,9 +1,25 @@
 
+import { db } from '../db';
+import { fishProductsTable } from '../db/schema';
 import { type FishProduct } from '../schema';
+import { eq, desc } from 'drizzle-orm';
 
 export async function getFishermanProducts(fishermanId: number): Promise<FishProduct[]> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is to fetch all products for a specific fisherman.
-    // Should filter products by fisherman_id and return in descending order by created_at.
-    return Promise.resolve([]);
+  try {
+    const results = await db.select()
+      .from(fishProductsTable)
+      .where(eq(fishProductsTable.fisherman_id, fishermanId))
+      .orderBy(desc(fishProductsTable.created_at))
+      .execute();
+
+    // Convert numeric fields back to numbers before returning
+    return results.map(product => ({
+      ...product,
+      price_per_kg: parseFloat(product.price_per_kg),
+      stock_kg: parseFloat(product.stock_kg)
+    }));
+  } catch (error) {
+    console.error('Failed to get fisherman products:', error);
+    throw error;
+  }
 }
